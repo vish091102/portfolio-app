@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -17,10 +18,16 @@ public class StockService {
     @Autowired
     private StockRepository stockRepository;
 
+    public List<Stock> getAllStocks() {
+        return stockRepository.findAll();
+    }
+
     public String updateStockFromCSV(MultipartFile file) throws Exception{
         BufferedReader br = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8));
         String line;
-        int count = 0;
+        //int count = 0;
+        int updateCnt = 0;
+        int insertCnt = 0;
 
         while((line = br.readLine()) != null) {
             String[] data = line.split(",");
@@ -35,12 +42,18 @@ public class StockService {
                 stock.setStockName(stockName);
                 stock.setCurrPrice(currentPrice);
                 stockRepository.save(stock);
-                count++;
+                //count++;
+                updateCnt++;
             }else {
                 //add the logic to inset new stock if needed
+                Stock newStock = new Stock();
+                newStock.setStockName(stockName);
+                newStock.setCurrPrice(currentPrice);
+                stockRepository.save(newStock);
+                insertCnt++;
             }
         }
 
-        return count + " stocks successfully updated";
+        return updateCnt + " stocks successfully updated, " + insertCnt + "stock successfully inserted.";
     }
 }

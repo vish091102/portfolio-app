@@ -20,7 +20,11 @@ public class PortfolioController {
 
     @GetMapping("/{userId}")
     public ResponseEntity<Map<String, Object>> getPortfolio(@PathVariable Long userId) {
-        Map<String, Object> portfolio = portfolioService.getUserPortfolio(userId);
-        return ResponseEntity.ok(portfolio);
+        try{
+            Map<String, Object> portfolio = portfolioService.getUserPortfolio(userId);
+            return ResponseEntity.ok(portfolio);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }

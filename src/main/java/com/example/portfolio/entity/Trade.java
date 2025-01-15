@@ -1,22 +1,29 @@
 package com.example.portfolio.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.*;
 import lombok.Data;
 
 @Entity
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Trade {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long userAccId;
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @ManyToOne
+    @JoinColumn(name = "stock_id", nullable = false)
+    private Stock stock;
+
+    //private Long userAccId;
     private String tradeType;        //Buy/Sell
     private int quantity;
-    private Long stockId;
+    //private Long stockId;
     private double buyPrice;
 
 //    public Long getId() {

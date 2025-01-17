@@ -1,10 +1,11 @@
 package com.example.portfolio.controller;
 
-import com.example.portfolio.entity.Trade;
-import com.example.portfolio.kafka.TradeProducer;
+import com.example.portfolio.dto.TradeRequest;
+import com.example.portfolio.dto.TradeResponse;
+//import com.example.portfolio.kafka.TradeProducer;
 import com.example.portfolio.service.TradeService;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,28 +19,24 @@ public class TradeController {
     @Autowired
     private TradeService tradeService;
 
-    @Autowired
-    private TradeProducer tradeProducer;
+//    @Autowired
+//    private TradeProducer tradeProducer;
 
     @PostMapping("/execute")
-    public ResponseEntity<String> executeTrade(@RequestBody Trade tradeRequest) {
+    public ResponseEntity<TradeResponse> executeTrade(@RequestBody TradeRequest tradeRequest) {
         try{
-            String result = tradeService.executeTrade(
-                    tradeRequest.getUser().getId(),
-                    tradeRequest.getTradeType(),
-                    tradeRequest.getQuantity(),
-                    tradeRequest.getStock().getId()
-            );
-
-            return ResponseEntity.ok(result);
+            TradeResponse response = tradeService.executeTrade(tradeRequest);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(new TradeResponse("FAILURE", e.getMessage()), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Failed to execute trade: " + e.getMessage());
+            return new ResponseEntity<>(new TradeResponse("FAILURE", "An unexpected error occurred."), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    @PostMapping("/record")
+    /*@PostMapping("/record")
     public ResponseEntity<String> recordTrade(@RequestBody Trade trade) throws JsonProcessingException {
         tradeProducer.sendTrade(trade);
         return ResponseEntity.ok("Trade sent to Kafka for processing.");
-    }
+    }*/
 }

@@ -1,11 +1,11 @@
 package com.example.portfolio.service;
 
+import com.example.portfolio.dto.TradeRequest;
+import com.example.portfolio.dto.TradeResponse;
 import com.example.portfolio.entity.Stock;
 import com.example.portfolio.entity.Trade;
-import com.example.portfolio.entity.User;
 import com.example.portfolio.repo.StockRepository;
 import com.example.portfolio.repo.TradeRepository;
-import com.example.portfolio.repo.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -18,36 +18,36 @@ public class TradeService {
     private TradeRepository tradeRepository;
     @Autowired
     private StockRepository stockRepository;
-    @Autowired
-    private UserRepository userRepository;
 
-    public String executeTrade(Long userId, String tradeType, int quantity, Long stockId) {
-        //Validate User
-        Optional<User> userOpt = userRepository.findById(userId);
-        if (userOpt.isEmpty()) {
-            return "User not found!";
+    public TradeResponse executeTrade(TradeRequest tradeRequest) {
+        TradeResponse response = new TradeResponse();
+        Optional<Stock> stock = stockRepository.findById(tradeRequest.getStockId());
+
+        if(stock.isEmpty()) {
+            response.setStatus("FAILURE");
+            response.setMessage("Stock not found.");
+            return response;
         }
 
-        //Validate Stock
-        Optional<Stock> stockOpt = stockRepository.findById(stockId);
-        if (stockOpt.isEmpty()) {
-            return "Stock not found!";
+        if(tradeRequest.getQuantity() <= 0) {
+            response.setStatus("FAILURE");
+            response.setMessage("Quantity must be greater than zero.");
+            return response;
         }
-
-        double price = stockOpt.get().getCurrPrice();
 
         Trade trade = new Trade();
-        trade.setUser(userOpt.get());
-        trade.setTradeType(tradeType);
-        trade.setQuantity(quantity);
-        trade.setStock(stockOpt.get());
-        trade.setBuyPrice(price);
-
+        trade.setUserAccId(tradeRequest.getUserAccId());
+        trade.setTradeType(tradeRequest.getTradeTpye());
+        trade.setQuantity(tradeRequest.getQuantity());
+        trade.setStock(stock.get());
         tradeRepository.save(trade);
-        return "Trade executed successfully!";
+
+        response.setStatus("SUCCESS");
+        response.setMessage("Trade recorded successfully.");
+        return response;
     }
 
-    public void recordTrade(Long userId, String tradeType, int quantity, Long stockId, double buyPrice) {
+    /*public void recordTrade(Long userId, String tradeType, int quantity, Long stockId, double buyPrice) {
         Optional<User> userOpt = userRepository.findById(userId);
         if(userOpt.isEmpty()) {
             throw new IllegalArgumentException("User not found.");
@@ -69,5 +69,5 @@ public class TradeService {
 
         tradeRepository.save(trade);
         System.out.println("Trade executed successfully: " + trade);
-    }
+    }*/
 }

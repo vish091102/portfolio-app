@@ -1,15 +1,12 @@
 package com.example.portfolio.service;
 
+import com.example.portfolio.dto.StockDetailsResponse;
 import com.example.portfolio.entity.Stock;
 import com.example.portfolio.repo.StockRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -18,42 +15,25 @@ public class StockService {
     @Autowired
     private StockRepository stockRepository;
 
-    public List<Stock> getAllStocks() {
-        return stockRepository.findAll();
-    }
+    public StockDetailsResponse getStockDetails(Long stockId) {
+        Optional<Stock> stock = stockRepository.findById(stockId);
 
-    public String updateStockFromCSV(MultipartFile file) throws Exception{
-        BufferedReader br = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8));
-        String line;
-        //int count = 0;
-        int updateCnt = 0;
-        int insertCnt = 0;
-
-        while((line = br.readLine()) != null) {
-            String[] data = line.split(",");
-
-            Long stockId = Long.parseLong(data[0].trim());
-            String stockName = data[1].trim();
-            double currentPrice = Double.parseDouble(data[2].trim());
-
-            Optional<Stock> stockOptional = stockRepository.findById(stockId);
-            if(stockOptional.isPresent()) {
-                Stock stock = stockOptional.get();
-                stock.setStockName(stockName);
-                stock.setCurrPrice(currentPrice);
-                stockRepository.save(stock);
-                //count++;
-                updateCnt++;
-            }else {
-                //add the logic to inset new stock if needed
-                Stock newStock = new Stock();
-                newStock.setStockName(stockName);
-                newStock.setCurrPrice(currentPrice);
-                stockRepository.save(newStock);
-                insertCnt++;
-            }
+        if(stock.isEmpty()) {
+            throw new RuntimeException("Stock not found.");
         }
 
-        return updateCnt + " stocks successfully updated, " + insertCnt + "stock successfully inserted.";
+        StockDetailsResponse response = new StockDetailsResponse();
+        response.setStockId(stock.get().getId());
+        response.setStockName(stock.get().getName());
+
+        Map<String, Double> prices = new HashMap<>();
+        prices.put("open", stock.get().getOpenPrice());
+        prices.put("close", stock.get().getClosePrice());
+        prices.put("high", stock.get().getHighPrice());
+        prices.put("low", stock.get().getLowPrice());
+        prices.put("settlementPrice", stock.get().getSettlementPrice());
+        response.setPrices(prices);
+
+        return response;
     }
 }

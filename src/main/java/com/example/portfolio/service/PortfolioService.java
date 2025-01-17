@@ -1,11 +1,10 @@
 package com.example.portfolio.service;
 
-import com.example.portfolio.entity.Stock;
+import com.example.portfolio.dto.PortfolioResponse;
 import com.example.portfolio.entity.Trade;
-import com.example.portfolio.entity.User;
+import com.example.portfolio.helper.PortfolioStock;
 import com.example.portfolio.repo.StockRepository;
 import com.example.portfolio.repo.TradeRepository;
-import com.example.portfolio.repo.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -18,84 +17,27 @@ public class PortfolioService {
     private TradeRepository tradeRepository;
     @Autowired
     private StockRepository stockRepository;
-    @Autowired
-    private UserRepository userRepository;
 
-    public Map<String, Object> getUserPortfolio(Long userId) {
-        Optional<User> userOpt = userRepository.findById(userId);
-        if(userOpt.isEmpty()) {
-            throw new RuntimeException("User not found!");
-        }
+    public PortfolioResponse getPortfolio(Long userId) {
+        List<Trade> trades = tradeRepository.findByUserAccId(userId);
 
-        List<Trade> trades = userOpt.get().getTrades();
+        Map<Long, PortfolioStock> portfolioMap = new HashMap<>();
 
-        Map<Long, Map<String, Object>> stockHoldings = new HashMap<>();
+        for(Trade trade: trades) {
+            Long stockId = trade.getStock().getId();
+            PortfolioStock portfolioStock = portfolioMap.getOrDefault(stockId, new PortfolioStock(trade.getStock(), 0, 0, 0));
 
-        for (Trade trade : trades) {
-            Stock stock = trade.getStock();
-            long stockId = stock.getId();
-            String stockName = stock.getStockName();
-
-            Map<String, Object> holding = stockHoldings.getOrDefault(stockId, new HashMap<>());
-            holding.putIfAbsent("stockName", stockName);
-            holding.putIfAbsent("stockId", stockId);
-            holding.putIfAbsent("quantity", 0);
-            holding.putIfAbsent("buyPrice", 0.0);
-
-            int currentQuantity = (int) holding.get("quantity");
-            double totalBuyPrice = (double) holding.get("buyPrice");
-
-            if ("BUY".equalsIgnoreCase(trade.getTradeType())) {
-                int newQuantity = currentQuantity + trade.getQuantity();
-                double newBuyPrice = ((totalBuyPrice * currentQuantity) + (trade.getBuyPrice() * trade.getQuantity())) / newQuantity;
-
-                holding.put("quantity", newQuantity);
-                holding.put("buyPrice", newBuyPrice);
-            } else if ("SELL".equalsIgnoreCase(trade.getTradeType())) {
-                int newQuantity = currentQuantity - trade.getQuantity();
-                if (newQuantity < 0) {
-                    throw new IllegalArgumentException("Cannot sell more shares than owned for stock: " + stockName);
-                }
-                holding.put("quantity", newQuantity);
+            if("BUY".equalsIgnoreCase(trade.getTradeType())) {
+                portfolioStock.addQuantity(trade.getQuantity(), trade.getStock().getOpenPrice());
+            } else if("SELL".equalsIgnoreCase(trade.getTradeType())) {
+                portfolioStock.reduceQuantity(trade.getQuantity());
             }
 
-            stockHoldings.put(stockId, holding);
+            portfolioMap.put(stockId, portfolioStock);
         }
 
-        double totalBuyPrice = 0;
-        double totalCurrentValue = 0;
-        List<Map<String, Object>> holdings = new ArrayList<>();
-
-        for (Map<String, Object> holding : stockHoldings.values()) {
-            int quantity = (int) holding.get("quantity");
-            if (quantity > 0) {
-                long stockId = (long) holding.get("stockId");
-                Stock stock = stockRepository.findById(stockId).orElseThrow(() -> new IllegalArgumentException("Stock not found with ID: " + stockId));
-                double currPrice = stock.getCurrPrice();
-                double buyPrice = (double) holding.get("buyPrice");
-                double currentValue = currPrice * quantity;
-                double gainLoss = (currPrice - buyPrice) * quantity;
-
-                holding.put("currentPrice", currPrice);
-                holding.put("gainLoss", gainLoss);
-
-                totalBuyPrice += buyPrice * quantity;
-                totalCurrentValue += currentValue;
-
-                holdings.add(holding);
-            }
-        }
-
-        double profitLoss = totalCurrentValue - totalBuyPrice;
-        double profitLossPercentage = (totalBuyPrice > 0) ? (profitLoss / totalBuyPrice) * 100 : 0;
-
-        Map<String, Object> portfolio = new HashMap<>();
-        portfolio.put("holdings", holdings);
-        portfolio.put("totalBuyPrice", totalBuyPrice);
-        portfolio.put("totalCurrentValue", totalCurrentValue);
-        portfolio.put("profitLoss", profitLoss);
-        portfolio.put("profitLossPercentage", profitLossPercentage);
-
-        return portfolio;
+        PortfolioResponse response = new PortfolioResponse();
+        response.calculatePortfolio(portfolioMap.values());
+        return response;
     }
 }

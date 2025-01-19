@@ -1,3 +1,4 @@
-1,Groww,220.0
-2,Zerodha,170.0
-3,Upstox,120.0
+id,name,open_price,close_price,high_price,low_price,settlement_price
+1,Groww,310.0,360.0,370.0,300.0,320.0
+2,Zerodha,210.0,270.0,280.0,205.0,225.0
+3,Upstox,110.0,160.0,190.0,100.0,110.0

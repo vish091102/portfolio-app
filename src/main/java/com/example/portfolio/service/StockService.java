@@ -5,9 +5,13 @@ import com.example.portfolio.entity.Stock;
 import com.example.portfolio.repo.StockRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.*;
 
 @Service
 public class StockService {
@@ -35,5 +39,67 @@ public class StockService {
         response.setPrices(prices);
 
         return response;
+    }
+
+    public void updateStocks() {
+        String fileName = "stocks.csv";
+
+        try {
+            ClassLoader classLoader = getClass().getClassLoader();
+            InputStream inputStream = classLoader.getResourceAsStream(fileName);
+
+            if (inputStream == null) {
+                throw new IllegalArgumentException("File not found: " + fileName);
+            }
+
+            processCsvFile(inputStream);
+        } catch (IOException e) {
+            throw new RuntimeException("Error reading the CSV file: " + e.getMessage(), e);
+        }
+    }
+
+    private void processCsvFile(InputStream inputStream) throws IOException {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+            String line;
+            List<Stock> stocks = new ArrayList<>();
+            boolean isHeader = true;
+
+            while ((line = reader.readLine()) != null) {
+                if (isHeader) {
+                    isHeader = false;
+                    continue;
+                }
+
+                // Skip blank lines
+                if (line.trim().isEmpty()) {
+                    continue;
+                }
+
+                Stock stock = parseCsvRowToStock(line);
+                stocks.add(stock);
+            }
+
+            stockRepository.saveAll(stocks);
+        }
+    }
+
+    private Stock parseCsvRowToStock(String line) {
+        String[] fields = line.split(",");
+
+        // Validate the number of columns
+        if (fields.length != 7) {
+            throw new IllegalArgumentException("Invalid CSV format. Each row must have 7 columns.");
+        }
+
+        Stock stock = new Stock();
+        stock.setId(Long.parseLong(fields[0].trim()));
+        stock.setName(fields[1].trim());
+        stock.setOpenPrice(Double.parseDouble(fields[2].trim()));
+        stock.setClosePrice(Double.parseDouble(fields[3].trim()));
+        stock.setHighPrice(Double.parseDouble(fields[4].trim()));
+        stock.setLowPrice(Double.parseDouble(fields[5].trim()));
+        stock.setSettlementPrice(Double.parseDouble(fields[6].trim()));
+
+        return stock;
     }
 }

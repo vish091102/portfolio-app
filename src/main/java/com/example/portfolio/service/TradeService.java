@@ -47,27 +47,28 @@ public class TradeService {
         return response;
     }
 
-    /*public void recordTrade(Long userId, String tradeType, int quantity, Long stockId, double buyPrice) {
-        Optional<User> userOpt = userRepository.findById(userId);
-        if(userOpt.isEmpty()) {
-            throw new IllegalArgumentException("User not found.");
-        }
-        User user = userOpt.get();
+    public TradeResponse recordTrade(TradeRequest tradeRequest) {
+        TradeResponse response = new TradeResponse();
 
-        Optional<Stock> stockOpt = stockRepository.findById(stockId);
-        if(stockOpt.isEmpty()) {
-            throw new IllegalArgumentException("Stock not found.");
+        Optional<Stock> stock = stockRepository.findById(tradeRequest.getStockId());
+
+        if(stock.isEmpty()) {
+            throw new IllegalArgumentException("Stock not found for Id: " + tradeRequest.getStockId());
         }
-        Stock stock = stockOpt.get();
+        if(tradeRequest.getQuantity() <= 0) {
+            throw new IllegalArgumentException("Quantity must be greater than zero.");
+        }
 
         Trade trade = new Trade();
-        trade.setUser(user);
-        trade.setTradeType(tradeType);
-        trade.setQuantity(quantity);
-        trade.setStock(stock);
-        trade.setBuyPrice(buyPrice);
-
+        trade.setUserAccId(tradeRequest.getUserAccId());
+        trade.setTradeType(tradeRequest.getTradeTpye());
+        trade.setQuantity(tradeRequest.getQuantity());
+        trade.setStock(stock.get());
         tradeRepository.save(trade);
-        System.out.println("Trade executed successfully: " + trade);
-    }*/
+
+        response.setStatus("SUCCESS");
+        response.setMessage("Trade executed successfully.");
+
+        return response;
+    }
 }

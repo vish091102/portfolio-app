@@ -1,6 +1,7 @@
 package com.example.portfolio.controller;
 
 import com.example.portfolio.dto.StockDetailsResponse;
+import com.example.portfolio.service.StockPriceUpdater;
 import com.example.portfolio.service.StockService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -14,6 +15,9 @@ public class StockController {
 
     @Autowired
     private StockService stockService;
+
+    @Autowired
+    private StockPriceUpdater stockPriceUpdater;
 
     @GetMapping("/{stockId}")
     public ResponseEntity<StockDetailsResponse> getStockDetails(@PathVariable Long stockId) {
@@ -30,6 +34,17 @@ public class StockController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         } catch (Exception e) {
             return new ResponseEntity<>("An error occurred while processing the file.", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("update-prices")
+    public ResponseEntity<String> updateStockPrices() {
+        try {
+            stockPriceUpdater.updateStockPrices();
+            return ResponseEntity.ok("Stock prices updated successfully.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to update stock prices: " + e.getMessage());
         }
     }
 }
